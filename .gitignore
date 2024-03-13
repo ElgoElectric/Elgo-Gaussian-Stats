@@ -1,1 +1,5 @@
-Datasets/
+app/Lib
+app/components/__pycache__
+app/data/__pycache__
+app/Scripts
+app/Include
