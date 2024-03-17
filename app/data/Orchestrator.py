@@ -59,7 +59,7 @@ class Orchestrator:
     # Cycle detection and count helpers
     print("Initializing Cycle Detector")
     start = time()
-    self.cycle_detector = CycleDetection(df = self.df, device = device, model = "knn", mode = "train", s3_obj = self.s3)
+    self.cycle_detector = CycleDetection.CycleDetection(df = self.df, device = device, model = "knn", mode = "train", s3_obj = self.s3)
     print(f"Time taken: {time() - start}")
 
     self.current_cycle = -1
@@ -69,7 +69,7 @@ class Orchestrator:
 
     # Gaussian Detection
     self.normal_operation = self.df[device].tolist()
-    self.gauss = GaussianCalculator(data = self.normal_operation)
+    self.gauss = GaussianCalculator.GaussianCalculator(data = self.normal_operation)
 
   def run(self):
     # First train on the data made available for training.
