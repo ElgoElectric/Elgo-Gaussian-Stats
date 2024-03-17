@@ -16,7 +16,7 @@ AWS_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN")
 
 # General constants
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
-FILE_NAME = "House_1.csv"
+FILE_NAME = "House_1_pruned.csv"
 TARGET_TRAINING_SET = f"training/refrigerator/{FILE_NAME}"
 
 class Orchestrator:
@@ -29,8 +29,7 @@ class Orchestrator:
   '''
 
   def __init__(self, device, device_mapping):
-    print(AWS_ACCESS_KEY_ID)
-    print("Reading CSV file")
+    print("Connecting to S3...")
     start = time()
     self.s3 = boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN)
     response = self.s3.list_buckets()
@@ -39,10 +38,11 @@ class Orchestrator:
     response = self.s3.get_object(Bucket=AWS_S3_BUCKET, Key=TARGET_TRAINING_SET)
 
     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-
+    print("Got response from s3")
+    
     if status == 200:
         print(f"Successful S3 get_object response. Status - {status}")
-        print("Reading CSV...")
+        print("Reading CSV from loaded body...")
         self.df = pd.read_csv(response.get("Body"))
         
     else:
