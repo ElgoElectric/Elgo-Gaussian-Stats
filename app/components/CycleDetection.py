@@ -1,9 +1,14 @@
 import io
+import os
+from dotenv import load_dotenv
 
 from sklearn.cluster import KMeans
 import sklearn.metrics as metrics
 
+load_dotenv()
 
+# General constants
+AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
 
 class CycleDetection:
 

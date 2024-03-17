@@ -4,7 +4,6 @@ from time import sleep, time
 import boto3
 from components import CycleDetection, GaussianCalculator
 from random import randrange
-from statistics import mean
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -53,7 +52,7 @@ class Orchestrator:
 
     # self.df = pd.read_csv(TARGET_TRAINING_SET)
     print("Renaming...")
-    self.df = self.df.rename(index=str, columns=device_mapping)
+    self.df = self.df.rename(index=str, columns=device_mapping).fillna(0)
     print(f"Time taken: {time() - start}")
 
     # Cycle detection and count helpers
@@ -69,12 +68,14 @@ class Orchestrator:
 
     # Gaussian Detection
     self.normal_operation = self.df[device].tolist()
+    print(f"Normal operation loaded with size: {len(self.normal_operation)}")
     self.gauss = GaussianCalculator.GaussianCalculator(data = self.normal_operation)
 
   def run(self):
     # First train on the data made available for training.
     print(f"Training cycle detector")
     start = time()
+    print(f"Training start: {start}")
     self.cycle_detector.KMeansTraining()
     print(f"Time taken: {time() - start}")
 
@@ -108,13 +109,13 @@ class Orchestrator:
         # Step 2: Plug this into gaussian pdf formula (Need to trigger pdf function of Gauss)
         # Step 3: Evaluate to see if you need to raise alarm (Need to carry out check in this function)
 
-        average_power = mean(self.current_power_list)
+        average_power = self.gauss.mean(self.current_power_list)
         self.gauss.calculate_pdf(average_power)
         alarm = self.gauss.sigma_rule()
         if alarm:
-          print(f"ANOMALOUS CYCLE | Datapoint: {average_power}")
+          print(f"ANOMALOUS CYCLE | Average power: {average_power}")
         else:
-          print(f"NORMAL CYCLE | Datapoint: {average_power}")
+          print(f"NORMAL CYCLE | Average power: {average_power}")
           # Call update here using self.normal_operation
           self.update_normal_operation(self.current_power_list)
 

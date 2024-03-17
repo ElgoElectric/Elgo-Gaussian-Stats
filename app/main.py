@@ -1,4 +1,5 @@
 from data import Orchestrator
+import warnings
 
 DEVICE_MAPPING = {
     "Appliance1":"Fridge",
@@ -15,6 +16,7 @@ DEVICE_MAPPING = {
 
 if __name__ == "__main__":
     print("Starting...")
-
+    warnings.filterwarnings(action='ignore')
+    
     orchestrator = Orchestrator.Orchestrator(device = "Fridge", device_mapping=DEVICE_MAPPING)
     orchestrator.run()
