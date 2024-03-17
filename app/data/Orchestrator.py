@@ -15,7 +15,7 @@ AWS_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN")
 
 # General constants
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
-FILE_NAME = "House_1_pruned.csv"
+FILE_NAME = "House_1_pruned_1m.csv"
 TARGET_TRAINING_SET = f"training/refrigerator/{FILE_NAME}"
 
 class Orchestrator:
