@@ -36,7 +36,7 @@ class Orchestrator:
     # Cycle detection and count helpers
     print("Initializing Cycle Detector")
     start = time()
-    self.cycle_detector = CycleDetection.CycleDetection(df = self.df, device = device, model = "knn", mode = "train", s3_obj = self.s3)
+    self.cycle_detector = CycleDetection.CycleDetection(df = self.df, device = device, model = "knn", mode = "train")
     print(f"Time taken: {time() - start}")
 
     self.current_cycle = -1

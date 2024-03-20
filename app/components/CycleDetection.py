@@ -1,6 +1,7 @@
 import io
 import os
 from dotenv import load_dotenv
+from api import AWSInterface
 
 from sklearn.cluster import KMeans
 import sklearn.metrics as metrics
@@ -8,11 +9,11 @@ import sklearn.metrics as metrics
 load_dotenv()
 
 # General constants
-AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
+AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET")
 
 class CycleDetection:
 
-  def __init__(self, df, device, model, mode, s3_obj, n_clusters = 2):
+  def __init__(self, df, device, model, mode, n_clusters = 2):
     '''
     df - the data frame which we want to train on.
     n_clusters - defines the number of clusters we want.
@@ -24,7 +25,7 @@ class CycleDetection:
     self.df = df
     self.device = device
     self.mode = mode
-    self.s3 = s3_obj
+    self.aws_api = AWSInterface.AWSInterface()
     if model == "knn":
       self.model = KMeans(n_clusters= self.n_clusters, random_state=0) # Two states of the device: ON cycle and OFF cycle
     elif model!="knn" or model!="gmm":
@@ -53,15 +54,10 @@ class CycleDetection:
     with io.StringIO() as csv_buffer:
       self.df.to_csv(csv_buffer, index=False)
 
-      response = self.s3.put_object(Bucket=AWS_S3_BUCKET, Key=target_directory, Body=csv_buffer.getvalue())
+      status = self.aws_api.write_to_bucket(bucket_name=AWS_S3_BUCKET_TRAINING, target_directory=target_directory, body=csv_buffer.getvalue())
 
-      status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+      print(f"{"Successful" if status == 200 else "Unsuccessful"}. Target Directory - {target_directory}")
 
-      if status == 200:
-          print(f"Successful S3 put_object response. Status - {status}")
-      else:
-          print(f"Unsuccessful S3 put_object response. Status - {status}")
-      print(f"File saved to {target_directory}")
     return self.df
 
   def detect_on_off(self, datapoint):

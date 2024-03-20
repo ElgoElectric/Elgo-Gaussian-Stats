@@ -58,8 +58,15 @@ class AWSInterface:
     def get_latest_file(self, files):
         pass
 
-    def write_to_bucket(self, bucket_name, file_name):
-        pass
+    def write_to_bucket(self, bucket_name, target_directory, body):
+        response = self.s3.put_object(Bucket=bucket_name, Key=target_directory, Body=body)
+
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+        if status == 200:
+            print(f"Successful S3 put_object response. Status - {status}")
+        else:
+            print(f"Unsuccessful S3 put_object response. Status - {status}")
 
     def get_status(self):
         return self.status
