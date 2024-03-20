@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 from time import time
 import pandas as pd
+from datetime import datetime
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ class AWSInterface:
         start = time()
         self.s3 =boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN) 
         self.status = self.s3.list_buckets().get("ResponseMetadata", {}).get("HTTPStatusCode")
+        self.last_read_stream = datetime.min
         print(f"Connection status {self.status}. Finished in {time() - start}")
     
 
@@ -64,14 +66,16 @@ class AWSInterface:
 
         latest = max(keys, key=keys.get)
         print(f"Last updated stream bucket at time {str(keys[latest])}")
+        if keys[latest] <= self.last_read_stream:
+            return []
         response = self.s3.get_object(Bucket=bucket_path, Key=latest)
         data = response.get("Body").readlines()
         power = []
+        
         for line in data:
             buffer = json.loads(line)
             power.append(buffer.get("devicePower"))
-        print(power)
-        return response.get("Body")
+        return power
 
     def write_to_bucket(self, bucket_name, target_directory, body):
         print("Writing data to S3 bucket", bucket_name)

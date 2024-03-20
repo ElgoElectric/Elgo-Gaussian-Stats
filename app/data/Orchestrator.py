@@ -59,6 +59,8 @@ class Orchestrator:
     while(True):
       sleep(10)
       datapoints = self.receive() # THIS METHOD IS YET TO BE IMPLEMENTED BASED ON AWS DATA STREAMING
+      if len(datapoints) == 0:
+        continue
       for datapoint in datapoints:
         print(f"\n\nReceived Datapoints {datapoint}")
         self.current_cycle = self.cycle_detector.detect_on_off([[datapoint]]) # Outputs 0 or 1 for OFF or ON respectively
