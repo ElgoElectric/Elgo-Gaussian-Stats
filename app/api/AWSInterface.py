@@ -23,7 +23,7 @@ class AWSInterface:
         '''
         1. Initialize an S3 object
         '''
-        print("Connecting to AWS API...", AWS_ACCESS_KEY_ID)
+        print("Connecting to AWS API...")
         start = time()
         self.s3 =boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN) 
         self.status = self.s3.list_buckets().get("ResponseMetadata", {}).get("HTTPStatusCode")
@@ -35,6 +35,7 @@ class AWSInterface:
         Function to load the content of a csv file. 
         For collective anomalies, this is used to read the training dataset.
         '''
+        print(f"Requesting from bucket {bucket_path}/{file_name}")
         response = self.s3.get_object(Bucket=bucket_path, Key=file_name)
 
         status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
