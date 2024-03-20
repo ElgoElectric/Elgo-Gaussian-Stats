@@ -3,21 +3,17 @@ import os
 from time import sleep, time
 import boto3
 from components import CycleDetection, GaussianCalculator
+from api import AWSInterface
 from random import randrange
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Environment variables - for local development
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_SESSION_TOKEN = os.getenv("AWS_SESSION_TOKEN")
-
 # General constants
-AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
-FILE_NAME = "House_1_pruned_1m.csv"
-TARGET_TRAINING_SET = f"training/refrigerator/{FILE_NAME}"
-
+AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET_TRAINING")
+TRAINING_FILE_NAME = "House_1_pruned_350k.csv"
+TARGET_TRAINING_SET = f"training/refrigerator/{TRAINING_FILE_NAME}"
+STREAM_FILE_PATH = ""
 class Orchestrator:
   '''
     Function to orchestrate the whole process from start to finish.
@@ -28,29 +24,11 @@ class Orchestrator:
   '''
 
   def __init__(self, device, device_mapping):
-    print("Connecting to S3...")
+
+    print("Initializeing Orchestrator...")
     start = time()
-    self.s3 = boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN)
-    response = self.s3.list_buckets()
-    print("Bucket list:", response["Buckets"])
-
-    response = self.s3.get_object(Bucket=AWS_S3_BUCKET, Key=TARGET_TRAINING_SET)
-
-    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    print("Got response from s3")
-    
-    if status == 200:
-        print(f"Successful S3 get_object response. Status - {status}")
-        print("Reading CSV from loaded body...")
-        self.df = pd.read_csv(response.get("Body"))
-        
-    else:
-        print(f"Unsuccessful S3 get_object response. Status - {status}")
-        exit(-1)
-
-
-
-    # self.df = pd.read_csv(TARGET_TRAINING_SET)
+    self.aws_api = AWSInterface.AWSInterface();
+    self.df = self.aws_api.get_csv_file(bucket_path=AWS_S3_BUCKET_TRAINING, file_name = TARGET_TRAINING_SET)
     print("Renaming...")
     self.df = self.df.rename(index=str, columns=device_mapping).fillna(0)
     print(f"Time taken: {time() - start}")
