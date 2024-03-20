@@ -29,7 +29,7 @@ class AWSInterface:
         start = time()
         self.s3 =boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN) 
         self.status = self.s3.list_buckets().get("ResponseMetadata", {}).get("HTTPStatusCode")
-        self.last_read_stream = datetime.min
+        self.last_read_stream = datetime.fromisoformat('2000-01-01 00:00:00.001+00:00')
         print(f"Connection status {self.status}. Finished in {time() - start}")
     
 
@@ -68,6 +68,7 @@ class AWSInterface:
         print(f"Last updated stream bucket at time {str(keys[latest])}")
         if keys[latest] <= self.last_read_stream:
             return []
+        self.last_read_stream = keys[latest]
         response = self.s3.get_object(Bucket=bucket_path, Key=latest)
         data = response.get("Body").readlines()
         power = []
