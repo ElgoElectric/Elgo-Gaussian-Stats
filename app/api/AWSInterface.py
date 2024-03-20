@@ -29,7 +29,7 @@ class AWSInterface:
         start = time()
         self.s3 =boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key = AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN) 
         self.status = self.s3.list_buckets().get("ResponseMetadata", {}).get("HTTPStatusCode")
-        self.last_read_stream = datetime.min
+        self.last_read_stream = datetime.fromisoformat('2000-01-01 00:00:00.001+00:00')
         print(f"Connection status {self.status}. Finished in {time() - start}")
     
 
