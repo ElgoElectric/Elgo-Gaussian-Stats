@@ -53,10 +53,7 @@ class CycleDetection:
     '''
     with io.StringIO() as csv_buffer:
       self.df.to_csv(csv_buffer, index=False)
-
-      status = self.aws_api.write_to_bucket(bucket_name=AWS_S3_BUCKET_TRAINING, target_directory=target_directory, body=csv_buffer.getvalue())
-
-      print(f"{'Successful' if status == 200 else 'Unsuccessful'}. Target Directory - {target_directory}")
+      self.aws_api.write_to_bucket(bucket_name=AWS_S3_BUCKET_TRAINING, target_directory=target_directory, body=csv_buffer.getvalue())
 
     return self.df
 
