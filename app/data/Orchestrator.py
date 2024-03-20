@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 from time import sleep, time
-import boto3
 from components import CycleDetection, GaussianCalculator
 from api import AWSInterface
 from random import randrange
@@ -13,7 +12,7 @@ load_dotenv()
 AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET_TRAINING")
 TRAINING_FILE_NAME = "House_1_pruned_350k.csv"
 TARGET_TRAINING_SET = f"training/refrigerator/{TRAINING_FILE_NAME}"
-STREAM_FILE_PATH = ""
+STREAM_FILE_PATH = "ingestdata-sample-stream" # Sample directory - ingestdata-sample-stream
 class Orchestrator:
   '''
     Function to orchestrate the whole process from start to finish.
@@ -24,7 +23,6 @@ class Orchestrator:
   '''
 
   def __init__(self, device, device_mapping):
-
     print("Initializeing Orchestrator...")
     start = time()
     self.aws_api = AWSInterface.AWSInterface();
@@ -59,55 +57,57 @@ class Orchestrator:
 
     # Continuously request for datapoint from an endpoint and check to see if it is anomalous or not
     while(True):
-      sleep(3)
-      datapoint = self.receive() # THIS METHOD IS YET TO BE IMPLEMENTED BASED ON AWS DATA STREAMING
-      print(f"\n\nReceived Datapoint {datapoint}")
-      self.current_cycle = self.cycle_detector.detect_on_off([[datapoint]]) # Outputs 0 or 1 for OFF or ON respectively
-      print(f"Datapoint classified as {'ON' if self.current_cycle else 'OFF'}")
+      sleep(10)
+      datapoints = self.receive() # THIS METHOD IS YET TO BE IMPLEMENTED BASED ON AWS DATA STREAMING
+      for datapoint in datapoints:
+        print(f"\n\nReceived Datapoints {datapoint}")
+        self.current_cycle = self.cycle_detector.detect_on_off([[datapoint]]) # Outputs 0 or 1 for OFF or ON respectively
+        print(f"Datapoint classified as {'ON' if self.current_cycle else 'OFF'}")
 
-      if self.previous_cycle == -1 or self.previous_cycle == self.current_cycle:
-        # If the previous cycle is uninitialized or if the current and previous datapoints belong to the same cycle
-        print("Same as previous cycle")
-        self.previous_cycle = self.current_cycle
-        self.current_power_list.append(datapoint)
+        if self.previous_cycle == -1 or self.previous_cycle == self.current_cycle:
+          # If the previous cycle is uninitialized or if the current and previous datapoints belong to the same cycle
+          print("Same as previous cycle")
+          self.previous_cycle = self.current_cycle
+          self.current_power_list.append(datapoint)
 
-      if self.current_cycle != self.previous_cycle:
-        if len(self.current_power_list) < 2:
-          # The minimum number of datapoints to qualify as a cycle is 2. However, in the rare scenario that the power cycle keeps oscillating
-          # between ON and OFF before accumulating atleast 2 datapoints in each cycle, we can continue the loop and set the current cycle to the
-          # same as the previous cycle. This effectively accumulates atleast two datapoints in current power list, even if the power cycle is erratic
-          # and jumps around.
+        if self.current_cycle != self.previous_cycle:
+          if len(self.current_power_list) < 2:
+            # The minimum number of datapoints to qualify as a cycle is 2. However, in the rare scenario that the power cycle keeps oscillating
+            # between ON and OFF before accumulating atleast 2 datapoints in each cycle, we can continue the loop and set the current cycle to the
+            # same as the previous cycle. This effectively accumulates atleast two datapoints in current power list, even if the power cycle is erratic
+            # and jumps around.
+            self.current_power_list.append(datapoint)
+            self.previous_cycle = self.current_cycle
+            continue
+
+          print("Different from previous cycle")
+          # The cycle has changed, and it's time to check if the cycle is anomalous or not.
+          # Step 1: Calculate the average power in the current cycle (Done by the Gauss class, internally)
+          # Step 2: Plug this into gaussian pdf formula (Need to trigger pdf function of Gauss)
+          # Step 3: Evaluate to see if you need to raise alarm (Need to carry out check in this function)
+
+          average_power = self.gauss.mean(self.current_power_list)
+          self.gauss.calculate_pdf(average_power)
+          alarm = self.gauss.sigma_rule()
+          if alarm:
+            print(f"ANOMALOUS CYCLE | Average power: {average_power}")
+          else:
+            print(f"NORMAL CYCLE | Average power: {average_power}")
+            # Call update here using self.normal_operation
+            self.update_normal_operation(self.current_power_list)
+
+          self.current_power_list = []
           self.current_power_list.append(datapoint)
           self.previous_cycle = self.current_cycle
-          continue
-
-        print("Different from previous cycle")
-        # The cycle has changed, and it's time to check if the cycle is anomalous or not.
-        # Step 1: Calculate the average power in the current cycle (Done by the Gauss class, internally)
-        # Step 2: Plug this into gaussian pdf formula (Need to trigger pdf function of Gauss)
-        # Step 3: Evaluate to see if you need to raise alarm (Need to carry out check in this function)
-
-        average_power = self.gauss.mean(self.current_power_list)
-        self.gauss.calculate_pdf(average_power)
-        alarm = self.gauss.sigma_rule()
-        if alarm:
-          print(f"ANOMALOUS CYCLE | Average power: {average_power}")
-        else:
-          print(f"NORMAL CYCLE | Average power: {average_power}")
-          # Call update here using self.normal_operation
-          self.update_normal_operation(self.current_power_list)
-
-
-        self.current_power_list = []
-        self.current_power_list.append(datapoint)
-        self.previous_cycle = self.current_cycle
+  
   def receive(self):
     '''
       Function to ping endpoint and see if there is any datapoint available.
-      Endpoint to ping is AWS S3, and it contains buffered data.
+      Endpoint to ping is in AWS S3, and it contains buffered data. 
     '''
-
-    return randrange(0, 150, 5)
+    return self.aws_api.get_latest_in_bucket(bucket_path=STREAM_FILE_PATH)
+    # return randrange(0, 150, 5)
+  
   def update_normal_operation(self, new_data):
     '''
     Function to:

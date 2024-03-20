@@ -1,3 +1,4 @@
+import json
 import boto3
 from dotenv import load_dotenv
 import os
@@ -49,16 +50,31 @@ class AWSInterface:
             print(f"Unsuccessful S3 get_object response. Status - {status}")
             exit(-1)
 
-    def get_bucket_content(self, bucket_path):
+    def get_latest_in_bucket(self, bucket_path):
         '''
-        Function to read all the files in the bucket
+        Function to read all the files in the bucket, and get the content from the latest one. 
+        Additionally, the function also detects if the bucket has been read before, and filters it if it has not been returned before. 
         '''
-        pass
+        contents = self.s3.list_objects_v2(Bucket = bucket_path).get("Contents")
 
-    def get_latest_file(self, files):
-        pass
+        keys = {}
+
+        for obj in contents:
+            keys[obj.get("Key")] = obj.get("LastModified")
+
+        latest = max(keys, key=keys.get)
+        print(f"Last updated stream bucket at time {str(keys[latest])}")
+        response = self.s3.get_object(Bucket=bucket_path, Key=latest)
+        data = response.get("Body").readlines()
+        power = []
+        for line in data:
+            buffer = json.loads(line)
+            power.append(buffer.get("devicePower"))
+        print(power)
+        return response.get("Body")
 
     def write_to_bucket(self, bucket_name, target_directory, body):
+        print("Writing data to S3 bucket", bucket_name)
         response = self.s3.put_object(Bucket=bucket_name, Key=target_directory, Body=body)
 
         status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")

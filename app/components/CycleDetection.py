@@ -9,7 +9,7 @@ import sklearn.metrics as metrics
 load_dotenv()
 
 # General constants
-AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET")
+AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET_TRAINING")
 
 class CycleDetection:
 
