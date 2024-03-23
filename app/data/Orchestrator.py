@@ -133,7 +133,7 @@ class Orchestrator:
     return self.aws_api.get_latest_in_bucket(bucket_path=STREAM_FILE_PATH)
   
   def send(self, data):
-    json_data = json.dumps(data)
+    json_data = json.dumps(data, ensure_ascii=False)
     res = requests.post(API_URL, json=json_data)
     if res.status_code == 200:
       print("Successfully sent anomaly notification to user backend")
