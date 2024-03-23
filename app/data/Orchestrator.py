@@ -65,7 +65,7 @@ class Orchestrator:
       power_data = self.receive()
       if len(power_data) == 0:
         continue
-      for timestamp, datapoint in power_data:
+      for timestamp, datapoint in power_data.items():
         print(f"\n\nReceived Datapoints {datapoint}")
         self.current_cycle = self.cycle_detector.detect_on_off([[datapoint]]) # Outputs 0 or 1 for OFF or ON respectively
         print(f"Datapoint at t = {timestamp} classified as {'ON' if self.current_cycle else 'OFF'}")
