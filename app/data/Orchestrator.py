@@ -109,8 +109,8 @@ class Orchestrator:
             print(f"ANOMALOUS CYCLE | Average power: {average_power}")
             data = {
               "device_label": DEVICE_LABEL,
-              "timestamp_start": self.start_timestamp,
-              "timestamp_end": timestamp,
+              "timestamp_start": self.start_timestamp.isoformat(),
+              "timestamp_end": timestamp.isoformat(),
               "valid_anomaly": True,
               "action_taken": False       
             }
