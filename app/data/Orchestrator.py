@@ -102,8 +102,8 @@ class Orchestrator:
           # Step 3: Evaluate to see if you need to raise alarm (Need to carry out check in this function)
 
           average_power = self.gauss.mean(self.current_power_list)
-          self.gauss.calculate_pdf(average_power)
-          alarm = self.gauss.sigma_rule()
+          self.gauss.calculate_pdf(datapoint=average_power)
+          alarm = self.gauss.sigma_rule(datapoint=average_power)
           if alarm:
             print(f"ANOMALOUS CYCLE | Average power: {average_power}")
             data = {

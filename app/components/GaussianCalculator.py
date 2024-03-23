@@ -25,8 +25,8 @@ class GaussianCalculator:
   def stdev(self, data, xbar = None):
     return stdev(data, xbar = xbar)
 
-  def sigma_rule(self):
-    if self._pdf > (self._mean + (3*self._stdev)) or self._pdf < (self._mean - (3*self._stdev)):
+  def sigma_rule(self, datapoint):
+    if datapoint > (self._mean + (3*self._stdev)) or datapoint < (self._mean - (3*self._stdev)):
       return True
     else:
       return False
