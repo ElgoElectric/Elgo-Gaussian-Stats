@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from time import sleep, time
 from components import CycleDetection, GaussianCalculator
 from api import AWSInterface
@@ -132,7 +133,8 @@ class Orchestrator:
     return self.aws_api.get_latest_in_bucket(bucket_path=STREAM_FILE_PATH)
   
   def send(self, data):
-    res = requests.post(API_URL, json=data)
+    json_data = json.dumps(data)
+    res = requests.post(API_URL, json=json_data)
     if res.status_code == 200:
       print("Successfully sent anomaly notification to user backend")
     else:
