@@ -1,18 +1,21 @@
-import pandas as pd
 import os
+import requests
 from time import sleep, time
 from components import CycleDetection, GaussianCalculator
 from api import AWSInterface
-from random import randrange
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# General constants
+# General constants.
 AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET_TRAINING")
 TRAINING_FILE_NAME = "House_1_pruned_350k.csv"
 TARGET_TRAINING_SET = f"training/refrigerator/{TRAINING_FILE_NAME}"
 STREAM_FILE_PATH = "ingestdata-sample-stream" # Sample directory - ingestdata-sample-stream
+API_URL = "https://elgo-backend.vercel.app/anomalies/createAnomaly"
+DEVICE_LABEL = "device12345"
+
 class Orchestrator:
   '''
     Function to orchestrate the whole process from start to finish.
@@ -30,20 +33,21 @@ class Orchestrator:
     print("Renaming...")
     self.df = self.df.rename(index=str, columns=device_mapping).fillna(0)
     print(f"Time taken: {time() - start}")
+    self.device = device
 
     # Cycle detection and count helpers
     print("Initializing Cycle Detector")
     start = time()
-    self.cycle_detector = CycleDetection.CycleDetection(df = self.df, device = device, model = "knn", mode = "train")
+    self.cycle_detector = CycleDetection.CycleDetection(df = self.df, device = self.device, model = "knn", mode = "train", aws_api=self.aws_api)
     print(f"Time taken: {time() - start}")
 
     self.current_cycle = -1
     self.previous_cycle = -1
-
+    self.start_timestamp = datetime.fromisoformat('2000-01-01 00:00:01')
     self.current_power_list = []
 
     # Gaussian Detection
-    self.normal_operation = self.df[device].tolist()
+    self.normal_operation = self.df[self.device].tolist()
     print(f"Normal operation loaded with size: {len(self.normal_operation)}")
     self.gauss = GaussianCalculator.GaussianCalculator(data = self.normal_operation)
 
@@ -58,19 +62,28 @@ class Orchestrator:
     # Continuously request for datapoint from an endpoint and check to see if it is anomalous or not
     while(True):
       sleep(10)
-      datapoints = self.receive() # THIS METHOD IS YET TO BE IMPLEMENTED BASED ON AWS DATA STREAMING
-      if len(datapoints) == 0:
+      power_data = self.receive()
+      if len(power_data) == 0:
         continue
-      for datapoint in datapoints:
+      for timestamp, datapoint in power_data:
         print(f"\n\nReceived Datapoints {datapoint}")
         self.current_cycle = self.cycle_detector.detect_on_off([[datapoint]]) # Outputs 0 or 1 for OFF or ON respectively
-        print(f"Datapoint classified as {'ON' if self.current_cycle else 'OFF'}")
+        print(f"Datapoint at t = {timestamp} classified as {'ON' if self.current_cycle else 'OFF'}")
 
-        if self.previous_cycle == -1 or self.previous_cycle == self.current_cycle:
-          # If the previous cycle is uninitialized or if the current and previous datapoints belong to the same cycle
+        if self.previous_cycle == -1:
+          # If the previous cycle is uninitialized
+          print("Unintialized cycle, initializing now...")
+          self.previous_cycle = self.current_cycle
+          self.current_power_list.append(datapoint)
+          self.start_timestamp = timestamp
+          continue
+
+        if self.previous_cycle == self.current_cycle:
+          # If the current and previous datapoints belong to the same cycle
           print("Same as previous cycle")
           self.previous_cycle = self.current_cycle
           self.current_power_list.append(datapoint)
+          continue
 
         if self.current_cycle != self.previous_cycle:
           if len(self.current_power_list) < 2:
@@ -93,6 +106,14 @@ class Orchestrator:
           alarm = self.gauss.sigma_rule()
           if alarm:
             print(f"ANOMALOUS CYCLE | Average power: {average_power}")
+            data = {
+              "device_label": DEVICE_LABEL,
+              "timestamp_start": str(self.start_timestamp),
+              "timestamp_end": str(timestamp),
+              "valid_anomaly": True,
+              "action_taken": False       
+            }
+            self.send(data)
           else:
             print(f"NORMAL CYCLE | Average power: {average_power}")
             # Call update here using self.normal_operation
@@ -100,6 +121,7 @@ class Orchestrator:
 
           self.current_power_list = []
           self.current_power_list.append(datapoint)
+          self.start_timestamp = timestamp
           self.previous_cycle = self.current_cycle
   
   def receive(self):
@@ -108,7 +130,13 @@ class Orchestrator:
       Endpoint to ping is in AWS S3, and it contains buffered data. 
     '''
     return self.aws_api.get_latest_in_bucket(bucket_path=STREAM_FILE_PATH)
-    # return randrange(0, 150, 5)
+  
+  def send(self, data):
+    res = requests.post(API_URL, json=data)
+    if res.status_code == 200:
+      print("Successfully sent anomaly notification to user backend")
+    else:
+      print(f"Failed to post request to backend user server. Status: {res.status_code}.\n{res.text}")
   
   def update_normal_operation(self, new_data):
     '''

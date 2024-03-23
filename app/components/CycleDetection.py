@@ -13,7 +13,7 @@ AWS_S3_BUCKET_TRAINING = os.getenv("AWS_S3_BUCKET_TRAINING")
 
 class CycleDetection:
 
-  def __init__(self, df, device, model, mode, n_clusters = 2):
+  def __init__(self, df, device, model, mode, aws_api, n_clusters = 2):
     '''
     df - the data frame which we want to train on.
     n_clusters - defines the number of clusters we want.
@@ -25,7 +25,7 @@ class CycleDetection:
     self.df = df
     self.device = device
     self.mode = mode
-    self.aws_api = AWSInterface.AWSInterface()
+    self.aws_api = aws_api
     if model == "knn":
       self.model = KMeans(n_clusters= self.n_clusters, random_state=0) # Two states of the device: ON cycle and OFF cycle
     elif model!="knn" or model!="gmm":

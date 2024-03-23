@@ -71,12 +71,15 @@ class AWSInterface:
         self.last_read_stream = keys[latest]
         response = self.s3.get_object(Bucket=bucket_path, Key=latest)
         data = response.get("Body").readlines()
-        power = []
         
+        power_data = {}
         for line in data:
             buffer = json.loads(line)
-            power.append(buffer.get("devicePower"))
-        return power
+            power = buffer.get("devicePower")
+            time = datetime.fromisoformat(buffer.get("Cur_Timestamp"))
+            power_data[time] = power
+        print(f"Power Data:\n{power_data} ")
+        return power_data
 
     def write_to_bucket(self, bucket_name, target_directory, body):
         print("Writing data to S3 bucket", bucket_name)
