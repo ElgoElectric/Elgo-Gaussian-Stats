@@ -109,7 +109,7 @@ class Orchestrator:
           alarm = self.gauss.sigma_rule(datapoint=average_power)
           if alarm:
             print(f"ANOMALOUS CYCLE | Average power: {average_power}")
-            data = Anomaly(device_label=DEVICE_LABEL, timestamp_start=self.start_timestamp, timestamp_end=timestamp, valid_anomaly=True, action_taken=False)
+            data = Anomaly.Anomaly(device_label=DEVICE_LABEL, timestamp_start=self.start_timestamp, timestamp_end=timestamp, valid_anomaly=True, action_taken=False)
             self.send(data.dict())
           else:
             print(f"NORMAL CYCLE | Average power: {average_power}")
