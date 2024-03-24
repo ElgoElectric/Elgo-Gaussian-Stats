@@ -3,6 +3,7 @@ import requests
 import json
 from time import sleep, time
 from components import CycleDetection, GaussianCalculator
+from data import Anomaly
 from api import AWSInterface
 from datetime import datetime
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ TRAINING_FILE_NAME = "House_1_pruned_350k.csv"
 TARGET_TRAINING_SET = f"training/refrigerator/{TRAINING_FILE_NAME}"
 STREAM_FILE_PATH = "ingestdata-sample-stream" # Sample directory - ingestdata-sample-stream
 API_URL = "https://elgo-backend.vercel.app/anomalies/createAnomaly"
+# API_URL = "http://localhost:3000/anomalies/createAnomaly"
 DEVICE_LABEL = "device12345"
 
 class Orchestrator:
@@ -26,7 +28,7 @@ class Orchestrator:
     2. DEVICE - specific device for which we are carrying out the training.
   '''
 
-  def __init__(self, device, device_mapping):
+  def __init__(self, device: str, device_mapping: dict) -> None:
     print("Initializeing Orchestrator...")
     start = time()
     self.aws_api = AWSInterface.AWSInterface();
@@ -107,14 +109,8 @@ class Orchestrator:
           alarm = self.gauss.sigma_rule(datapoint=average_power)
           if alarm:
             print(f"ANOMALOUS CYCLE | Average power: {average_power}")
-            data = {
-              "device_label": DEVICE_LABEL,
-              "timestamp_start": self.start_timestamp.isoformat(),
-              "timestamp_end": timestamp.isoformat(),
-              "valid_anomaly": True,
-              "action_taken": False       
-            }
-            self.send(data)
+            data = Anomaly(device_label=DEVICE_LABEL, timestamp_start=self.start_timestamp, timestamp_end=timestamp, valid_anomaly=True, action_taken=False)
+            self.send(data.dict())
           else:
             print(f"NORMAL CYCLE | Average power: {average_power}")
             # Call update here using self.normal_operation
@@ -132,15 +128,14 @@ class Orchestrator:
     '''
     return self.aws_api.get_latest_in_bucket(bucket_path=STREAM_FILE_PATH)
   
-  def send(self, data):
-    json_data = json.dumps(data, ensure_ascii=False)
-    res = requests.post(API_URL, json=json_data)
+  def send(self, data: dict) -> None:
+    res = requests.post(API_URL, json=data, headers={"Content-Type": "application/json", "Accept": "*/*"})
     if res.status_code == 200:
       print("Successfully sent anomaly notification to user backend")
     else:
       print(f"Failed to post request to backend user server. Status: {res.status_code}.\n{res.text}")
   
-  def update_normal_operation(self, new_data):
+  def update_normal_operation(self, new_data: list) -> None:
     '''
     Function to:
       1. update self.normal_operation
@@ -152,4 +147,3 @@ class Orchestrator:
     self.normal_operation += new_data
     self.gauss.update(data = self.normal_operation)
     # You have the option to prune or dump data here.
-    pass
