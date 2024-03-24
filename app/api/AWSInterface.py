@@ -33,7 +33,7 @@ class AWSInterface:
         print(f"Connection status {self.status}. Finished in {time() - start}")
     
 
-    def get_csv_file(self, bucket_path, file_name):
+    def get_csv_file(self, bucket_path: str, file_name: str) -> pd.DataFrame | None:
         '''
         Function to load the content of a csv file. 
         For collective anomalies, this is used to read the training dataset.
@@ -52,7 +52,7 @@ class AWSInterface:
             print(f"Unsuccessful S3 get_object response. Status - {status}")
             exit(-1)
 
-    def get_latest_in_bucket(self, bucket_path):
+    def get_latest_in_bucket(self, bucket_path: str) -> list | None:
         '''
         Function to read all the files in the bucket, and get the content from the latest one. 
         Additionally, the function also detects if the bucket has been read before, and filters it if it has not been returned before. 
@@ -81,7 +81,7 @@ class AWSInterface:
         print(f"Power Data:\n{power_data} ")
         return power_data
 
-    def write_to_bucket(self, bucket_name, target_directory, body):
+    def write_to_bucket(self, bucket_name: str, target_directory: str, body) -> None:
         print("Writing data to S3 bucket", bucket_name)
         response = self.s3.put_object(Bucket=bucket_name, Key=target_directory, Body=body)
 
